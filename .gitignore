@@ -1,3 +1,4 @@
+
 logs
 *.log
 npm-debug.log*
@@ -21,3 +22,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+*.tsbuildinfo
+.bolt/
