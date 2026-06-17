@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { BookOpen, BookPlus, Clock, Plus, Trash2, Download, Upload } from 'lucide-react';
 import type { Notebook } from '../types';
-import { loadNotebooks, saveNotebooks } from '../types';
+import { storage } from '../storage';
 
 interface HomeScreenProps {
   onCreate: (name: string) => void;
@@ -10,7 +10,7 @@ interface HomeScreenProps {
 
 export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
   const [name, setName] = useState('');
-  const [notebooks, setNotebooks] = useState<Notebook[]>(loadNotebooks);
+  const [notebooks, setNotebooks] = useState<Notebook[]>(() => storage.load());
   const importRef = useRef<HTMLInputElement>(null);
 
   const handleCreate = () => {
@@ -18,18 +18,17 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
     if (!trimmed) return;
     onCreate(trimmed);
     setName('');
-    setNotebooks(loadNotebooks());
+    setNotebooks(storage.load());
   };
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = notebooks.filter(n => n.id !== id);
-    saveNotebooks(updated);
-    setNotebooks(updated);
+    storage.save
   };
 
   const handleExportAll = () => {
-    const data = JSON.stringify(loadNotebooks(), null, 2);
+    const data = JSON.stringify(storage.load(), null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -47,7 +46,7 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
       try {
         const imported = JSON.parse(reader.result as string) as Notebook[];
         if (!Array.isArray(imported)) throw new Error('Invalid format');
-        const existing = loadNotebooks();
+        const existing = storage.load();
         // Merge: overwrite notebooks with same id, add new ones
         const merged = [...existing];
         for (const nb of imported) {
@@ -55,7 +54,7 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
           if (idx >= 0) merged[idx] = nb;
           else merged.push(nb);
         }
-        saveNotebooks(merged);
+        storage.save(merged);
         setNotebooks(merged);
       } catch { alert('导入失败：文件格式不正确'); }
     };

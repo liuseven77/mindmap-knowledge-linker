@@ -13,9 +13,11 @@ export function useUndo(initialNodes: Node[], initialConnections: Connection[]) 
   const undoStack = useRef<Snapshot[]>([{ nodes: initialNodes, connections: initialConnections }]);
   const redoStack = useRef<Snapshot[]>([]);
   const freeze = useRef(false);
+  const skipInitial = useRef(true);
 
   // Auto-snapshot after state changes
   useEffect(() => {
+    if (skipInitial.current) { skipInitial.current = false; return; }
     if (freeze.current) return;
     const snap = { nodes, connections };
     undoStack.current.push(snap);

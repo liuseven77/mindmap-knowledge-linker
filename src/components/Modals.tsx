@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Node, Connection } from '../types';
-import { generateId } from '../types';
 
 interface EditNodeModalProps {
   node: Node;
@@ -9,7 +9,8 @@ interface EditNodeModalProps {
 }
 
 export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
-  const editingNode = { ...node };
+  const [name, setName] = useState(node.name);
+  const [content, setContent] = useState(node.content);
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -22,15 +23,15 @@ export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
         <div className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-amber-700 mb-2">节点名称</label>
-            <input type="text" value={editingNode.name}
-              onChange={e => editingNode.name = e.target.value}
+            <input type="text" value={name}
+              onChange={e => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border-2 border-amber-200
                        focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 text-amber-900" />
           </div>
           <div>
             <label className="block text-sm font-medium text-amber-700 mb-2">节点内容</label>
-            <textarea value={editingNode.content}
-              onChange={e => editingNode.content = e.target.value}
+            <textarea value={content}
+              onChange={e => setContent(e.target.value)}
               rows={4} placeholder="在此输入节点的详细内容..."
               className="w-full px-4 py-3 rounded-xl border-2 border-amber-200
                        focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100
@@ -39,7 +40,7 @@ export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
           <div className="flex gap-3 pt-2">
             <button onClick={onClose}
               className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium">取消</button>
-            <button onClick={() => { onSave(editingNode); onClose(); }}
+            <button onClick={() => { onSave({ ...node, name, content }); onClose(); }}
               className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium shadow-md">保存</button>
           </div>
         </div>
@@ -92,7 +93,7 @@ interface EditConnectionModalProps {
 }
 
 export function EditConnectionModal({ connection, fromName, toName, onSave, onDelete, onClose }: EditConnectionModalProps) {
-  const editing = { ...connection };
+  const [content, setContent] = useState(connection.content);
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
@@ -114,21 +115,21 @@ export function EditConnectionModal({ connection, fromName, toName, onSave, onDe
           </div>
           <div>
             <label className="block text-sm font-medium text-green-700 mb-2">联系内容</label>
-            <textarea value={editing.content}
-              onChange={e => editing.content = e.target.value}
+            <textarea value={content}
+              onChange={e => setContent(e.target.value)}
               rows={4} placeholder="描述这两个节点之间的关系..."
               className="w-full px-4 py-3 rounded-xl border-2 border-green-200
                        focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-100
                        text-gray-800 placeholder-green-300 resize-none" />
           </div>
           <div className="flex gap-3 pt-2">
-            <button onClick={() => { onDelete(editing.id); onClose(); }}
+            <button onClick={() => { onDelete(connection.id); onClose(); }}
               className="px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-medium flex items-center gap-2">
               <X size={18} />删除
             </button>
             <button onClick={onClose}
               className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium">取消</button>
-            <button onClick={() => { onSave(editing); onClose(); }}
+            <button onClick={() => { onSave({ ...connection, content }); onClose(); }}
               className="flex-1 px-4 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium shadow-md">保存</button>
           </div>
         </div>

@@ -7,6 +7,7 @@ import type { Node, Connection, Notebook } from '../types';
 import { generateId } from '../types';
 import { useUndo } from '../useUndo';
 import { EditNodeModal, DuplicateModal, EditConnectionModal } from './Modals';
+import { worldToScreen, screenToWorld, panToCenter, nodeTransform } from '../lib/coordinates';
 
 interface MindMapProps {
   notebook: Notebook;
@@ -57,14 +58,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     return Math.min(1 + n * 0.08, 1.5);
   };
 
-  const screenPos = useCallback((x: number, y: number, cw: number, ch: number) => {
-    const sc = scaleRef.current;
-    const { x: px, y: py } = panRef.current;
-    return {
-      x: cw / 2 + px + (x - cw / 2) * sc,
-      y: ch / 2 + py + (y - ch / 2) * sc,
-    };
-  }, []);
+  const screenPos = worldToScreen;
+
 
   // ── Add / Delete ──────────────────────────────
 
@@ -105,13 +100,13 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     if (!found) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const cw = canvas.clientWidth;
-    const ch = canvas.clientHeight;
-    const sc = scaleRef.current;
-    setPan({
-      x: (cw / 2 - found.x) * sc,
-      y: (ch / 2 - found.y) * sc,
+    const { panX, panY } = panToCenter(found.x, found.y, {
+      panX: panRef.current.x, panY: panRef.current.y,
+      scale: scaleRef.current,
+      canvasW: canvas.clientWidth,
+      canvasH: canvas.clientHeight,
     });
+    setPan({ x: panX, y: panY });
     setSelectedNodes(new Set([found.id]));
   };
 
@@ -186,9 +181,13 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
           const { x: px, y: py } = panRef.current;
           const cx = rect.width / 2;
           const cy = rect.height / 2;
-          const wx = (sx - cx - px) / sc + cx;
-          const wy = (sy - cy - py) / sc + cy;
-          setNodes(prev => prev.map(n => n.id === id ? { ...n, x: wx, y: wy } : n));
+          const wx = screenToWorld(sx, sy, {
+                panX, panY,
+                scale: sc,
+                canvasW: cx,
+                canvasH: cy,
+              });
+              setNodes(prev => prev.map(n => n.id === id ? { ...n, x: wx.x, y: wx.y } : n));
         }
         el.style.zIndex = '';
         el.style.transition = '';
@@ -260,11 +259,14 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const ch = canvas?.clientHeight ?? 600;
 
   const nodeStyle = (node: Node) => {
-    const p = screenPos(node.x, node.y, cw, ch);
     const sz = getNodeSize(node.id);
     return {
       left: 0, top: 0,
-      transform: `translate(${p.x - 60}px, ${p.y - 20}px) scale(${sz * scale})`,
+      transform: nodeTransform(node.x, node.y, sz, {
+        panX: panRef.current.x, panY: panRef.current.y,
+        scale,
+        canvasW: cw, canvasH: ch,
+      }),
     };
   };
 

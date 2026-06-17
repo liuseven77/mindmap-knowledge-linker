@@ -26,15 +26,4 @@ export interface Notebook {
 
 // ─── Helpers ────────────────────────────────────────
 
-export const NOTEBOOKS_KEY = 'mindmap_notebooks';
-
 export const generateId = () => Math.random().toString(36).substring(2, 15);
-
-export function loadNotebooks(): Notebook[] {
-  try { return JSON.parse(localStorage.getItem(NOTEBOOKS_KEY) || '[]'); }
-  catch { return []; }
-}
-
-export function saveNotebooks(nb: Notebook[]) {
-  localStorage.setItem(NOTEBOOKS_KEY, JSON.stringify(nb));
-}
