@@ -149,17 +149,15 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     e.preventDefault();
   };
 
-  // ── Node Drag (setPointerCapture — self-cleaning) ──
+  // ── Node Drag (world-space delta — scale-invariant) ──
 
   const dragState = useRef<{
     nodeId: string;
-    offsetX: number;
-    offsetY: number;
+    worldX: number;
+    worldY: number;
     startX: number;
     startY: number;
     active: boolean;
-    screenX: number;
-    screenY: number;
   } | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent, nodeId: string) => {
@@ -169,25 +167,16 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     el.style.zIndex = '50';
     el.style.touchAction = 'none';
 
-    const rect = canvasRef.current!.getBoundingClientRect();
-
-    // Read current screen position from the DOM element's inline transform
-    const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
-    let domX = 0, domY = 0;
-    if (m) {
-      domX = parseFloat(m[1]) + 60;
-      domY = parseFloat(m[2]) + 20;
-    }
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node) return;
 
     dragState.current = {
       nodeId,
-      offsetX: e.clientX - rect.left - domX,
-      offsetY: e.clientY - rect.top - domY,
+      worldX: node.x,
+      worldY: node.y,
       startX: e.clientX,
       startY: e.clientY,
       active: false,
-      screenX: domX,
-      screenY: domY,
     };
   };
 
@@ -206,42 +195,23 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     const canvas = canvasRef.current;
     if (!el || !canvas) return;
 
-    const rect = canvas.getBoundingClientRect();
     const sc = scaleRef.current;
-    const mx = (e.clientX - rect.left) - ds.offsetX;
-    const my = (e.clientY - rect.top) - ds.offsetY;
-    // Store current screen position so nodeStyle can mirror it during React renders
-    ds.screenX = mx;
-    ds.screenY = my;
+    // Screen delta / scale = world delta. Zoom-invariant.
+    const worldDX = (e.clientX - ds.startX) / sc;
+    const worldDY = (e.clientY - ds.startY) / sc;
+    const newWorldX = ds.worldX + worldDX;
+    const newWorldY = ds.worldY + worldDY;
 
-    el.style.transform = `translate(${mx - 60}px, ${my - 20}px) scale(${getNodeSize(ds.nodeId) * sc})`;
+    setNodes(prev => prev.map(n => n.id === ds.nodeId ? { ...n, x: newWorldX, y: newWorldY } : n));
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     const ds = dragState.current;
     if (!ds) return;
-
-    const el = nodeEls.current.get(ds.nodeId);
     (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
-
-    if (ds.active && el) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
-        if (m) {
-          const sx = parseFloat(m[1]) + 60;
-          const sy = parseFloat(m[2]) + 20;
-          const rect = canvas.getBoundingClientRect();
-          const sc = scaleRef.current;
-          const { x: px, y: py } = panRef.current;
-          const cx = rect.width / 2;
-          const cy = rect.height / 2;
-          const wx = screenToWorld(sx, sy, { panX: px, panY: py, scale: sc, canvasW: cx, canvasH: cy });
-          setNodes(prev => prev.map(n => n.id === ds.nodeId ? { ...n, x: wx.x, y: wx.y } : n));
-        }
-      }
-      el.style.zIndex = '';
-      el.style.transition = '';
+    if (ds.active) {
+      const el = nodeEls.current.get(ds.nodeId);
+      if (el) { el.style.zIndex = ''; }
     }
     dragState.current = null;
   };
@@ -250,7 +220,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     const ds = dragState.current;
     if (!ds) return;
     const el = nodeEls.current.get(ds.nodeId);
-    if (el) { el.style.zIndex = ''; el.style.transition = ''; }
+    if (el) { el.style.zIndex = ''; }
     dragState.current = null;
   };
 
@@ -310,16 +280,6 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const ch = canvas?.clientHeight ?? 600;
 
   const nodeStyle = (node: Node): React.CSSProperties => {
-    // During active drag, output the DOM-calculated screen position to avoid transform conflicts
-    const ds = dragState.current;
-    if (ds?.nodeId === node.id && ds.active) {
-      const sc = scaleRef.current;
-      const sz = getNodeSize(node.id);
-      return {
-        left: 0, top: 0,
-        transform: `translate(${ds.screenX - 60}px, ${ds.screenY - 20}px) scale(${sz * sc})`,
-      };
-    }
     const sz = getNodeSize(node.id);
     return {
       left: 0, top: 0,
