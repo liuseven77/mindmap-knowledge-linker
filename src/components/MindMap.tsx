@@ -302,7 +302,11 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const cw = canvas?.clientWidth ?? 800;
   const ch = canvas?.clientHeight ?? 600;
 
-  const nodeStyle = (node: Node) => {
+  const nodeStyle = (node: Node): React.CSSProperties => {
+    // Skip React rendering while this node is actively dragged — DOM handles the position
+    if (dragState.current?.nodeId === node.id && dragState.current.active) {
+      return { left: 0, top: 0 };
+    }
     const sz = getNodeSize(node.id);
     return {
       left: 0, top: 0,
