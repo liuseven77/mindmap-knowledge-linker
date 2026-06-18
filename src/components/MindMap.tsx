@@ -160,7 +160,6 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
   const handlePointerDown = (e: React.PointerEvent, nodeId: string) => {
     e.stopPropagation();
-    e.preventDefault();
     const el = e.currentTarget as HTMLDivElement;
     el.setPointerCapture(e.pointerId);
     el.style.zIndex = '50';
