@@ -147,46 +147,78 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     e.preventDefault();
   };
 
-  // ── Node Drag ──
+  // ── Node Drag (setPointerCapture — self-cleaning) ──
 
-  const dragOffset = useRef({ x: 0, y: 0 });
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const dragPending = useRef<string | null>(null);
+  const dragState = useRef<{
+    nodeId: string;
+    offsetX: number;
+    offsetY: number;
+    startX: number;
+    startY: number;
+    active: boolean; // true after 3px threshold
+  } | null>(null);
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      // Activate drag if pending and crossed threshold
-      if (dragPending.current) {
-        const dx = Math.abs(e.clientX - dragStartPos.current.x);
-        const dy = Math.abs(e.clientY - dragStartPos.current.y);
-        if (dx < 3 && dy < 3) return;
-        draggingId.current = dragPending.current;
-        dragPending.current = null;
-        const el = nodeEls.current.get(draggingId.current!);
-        if (el) el.style.zIndex = '50';
-      }
+  const handlePointerDown = (e: React.PointerEvent, nodeId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const el = e.currentTarget as HTMLDivElement;
+    el.setPointerCapture(e.pointerId);
+    el.style.zIndex = '50';
+    el.style.touchAction = 'none';
 
-      const id = draggingId.current;
-      if (!id) return;
-      const el = nodeEls.current.get(id);
-      const canvas = canvasRef.current;
-      if (!el || !canvas) return;
+    const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+    let ox = 0, oy = 0;
+    if (m) {
+      const nodeLeft = parseFloat(m[1]);
+      const nodeTop = parseFloat(m[2]);
+      const canvasRect = canvasRef.current!.getBoundingClientRect();
+      ox = e.clientX - canvasRect.left - nodeLeft - 60;
+      oy = e.clientY - canvasRect.top - nodeTop - 20;
+    }
 
-      const rect = canvas.getBoundingClientRect();
-      const sc = scaleRef.current;
-      const mx = (e.clientX - rect.left) - dragOffset.current.x;
-      const my = (e.clientY - rect.top) - dragOffset.current.y;
-
-      el.style.transform = `translate(${mx - 60}px, ${my - 20}px) scale(${getNodeSize(id) * sc})`;
+    dragState.current = {
+      nodeId,
+      offsetX: ox,
+      offsetY: oy,
+      startX: e.clientX,
+      startY: e.clientY,
+      active: false,
     };
+  };
 
-    const onUp = () => {
-      const id = draggingId.current;
-      dragPending.current = null;
-      if (!id) return;
-      const el = nodeEls.current.get(id);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    const ds = dragState.current;
+    if (!ds) return;
+
+    if (!ds.active) {
+      const dx = Math.abs(e.clientX - ds.startX);
+      const dy = Math.abs(e.clientY - ds.startY);
+      if (dx < 3 && dy < 3) return;
+      ds.active = true;
+    }
+
+    const el = nodeEls.current.get(ds.nodeId);
+    const canvas = canvasRef.current;
+    if (!el || !canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const sc = scaleRef.current;
+    const mx = (e.clientX - rect.left) - ds.offsetX;
+    const my = (e.clientY - rect.top) - ds.offsetY;
+
+    el.style.transform = `translate(${mx - 60}px, ${my - 20}px) scale(${getNodeSize(ds.nodeId) * sc})`;
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    const ds = dragState.current;
+    if (!ds) return;
+
+    const el = nodeEls.current.get(ds.nodeId);
+    (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
+
+    if (ds.active && el) {
       const canvas = canvasRef.current;
-      if (el && canvas) {
+      if (canvas) {
         const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
         if (m) {
           const sx = parseFloat(m[1]) + 60;
@@ -196,54 +228,22 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
           const { x: px, y: py } = panRef.current;
           const cx = rect.width / 2;
           const cy = rect.height / 2;
-          const wx = screenToWorld(sx, sy, {
-                panX, panY,
-                scale: sc,
-                canvasW: cx,
-                canvasH: cy,
-              });
-              setNodes(prev => prev.map(n => n.id === id ? { ...n, x: wx.x, y: wx.y } : n));
+          const wx = screenToWorld(sx, sy, { panX: px, panY: py, scale: sc, canvasW: cx, canvasH: cy });
+          setNodes(prev => prev.map(n => n.id === ds.nodeId ? { ...n, x: wx.x, y: wx.y } : n));
         }
-        el.style.zIndex = '';
-        el.style.transition = '';
       }
-      draggingId.current = null;
-    };
-
-    const onLeave = () => { dragPending.current = null; draggingId.current = null; };
-    const onBlur = () => { dragPending.current = null; draggingId.current = null; };
-
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('mouseleave', onLeave);
-    window.addEventListener('blur', onBlur);
-    return () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-      document.removeEventListener('mouseleave', onLeave);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
-
-  const draggingId = useRef<string | null>(null);
-
-  const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const el = nodeEls.current.get(nodeId);
-    if (!el) return;
-    dragStartPos.current = { x: e.clientX, y: e.clientY };
-    dragPending.current = nodeId;
-    const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
-    if (m) {
-      const nodeLeft = parseFloat(m[1]);
-      const nodeTop = parseFloat(m[2]);
-      const canvasRect = canvasRef.current!.getBoundingClientRect();
-      dragOffset.current = {
-        x: e.clientX - canvasRect.left - nodeLeft - 60,
-        y: e.clientY - canvasRect.top - nodeTop - 20,
-      };
+      el.style.zIndex = '';
+      el.style.transition = '';
     }
+    dragState.current = null;
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    const ds = dragState.current;
+    if (!ds) return;
+    const el = nodeEls.current.get(ds.nodeId);
+    if (el) { el.style.zIndex = ''; el.style.transition = ''; }
+    dragState.current = null;
   };
 
   // ── Selection ─────────────────────────────────
@@ -575,8 +575,12 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
             <div
               key={node.id}
               ref={(el) => { if (el) nodeEls.current.set(node.id, el); }}
+              onPointerDown={(e) => handlePointerDown(e, node.id)}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerCancel}
+              onContextMenu={(e) => e.preventDefault()}
               onClick={(e) => handleNodeClick(e, node.id)}
-              onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
               onMouseEnter={() => setHoveredId(node.id)}
               onMouseLeave={() => setHoveredId(null)}
               style={nodeStyle(node)}
