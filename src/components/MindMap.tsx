@@ -196,11 +196,18 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
       draggingId.current = null;
     };
 
+    const onLeave = () => { draggingId.current = null; };
+    const onBlur = () => { draggingId.current = null; };
+
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+    document.addEventListener('mouseleave', onLeave);
+    window.addEventListener('blur', onBlur);
     return () => {
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('mouseleave', onLeave);
+      window.removeEventListener('blur', onBlur);
     };
   }, []);
 
@@ -208,9 +215,10 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
-    draggingId.current = nodeId;
+    e.preventDefault();
     const el = nodeEls.current.get(nodeId);
     if (!el) return;
+    draggingId.current = nodeId;
     el.style.zIndex = '50';
     const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
     if (m) {
