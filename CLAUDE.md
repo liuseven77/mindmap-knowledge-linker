@@ -8,7 +8,8 @@
 - Tailwind CSS 3 样式
 - Lucide React 图标
 - localStorage 存储（无后端）
-- @supabase/supabase-js 已安装但未启用
+- PWA (vite-plugin-pwa)
+- Vercel 部署
 
 ## 项目结构
 
@@ -17,33 +18,31 @@ src/
 ├── App.tsx                        # 根路由：首页 ↔ 画布
 ├── types.ts                       # 纯类型定义（Node, Connection, Notebook）
 ├── storage.ts                     # 存储接口 + localStorage 适配器（为 Supabase 预留）
-├── autoExport.ts                  # 自动备份：File System Access API 定时导出 JSON
-├── useUndo.ts                     # 撤销/重做 Hook
+├── autoExport.ts                  # 自动备份：File System Access API 导出 JSON
+├── useUndo.ts                     # 撤销/重做 Hook（快照栈，50 步，skipInitial）
 ├── index.css                      # Tailwind 指令
 ├── main.tsx                       # React 入口
 ├── lib/
-│   └── coordinates.ts             # 坐标变换纯函数（worldToScreen / screenToWorld / panToCenter / nodeTransform）
+│   └── coordinates.ts             # 坐标变换纯函数
 └── components/
-    ├── HomeScreen.tsx              # 首页（笔记本创建/选择/导入导出/自动备份开关）
-    ├── MindMap.tsx                 # 画布主组件（拖拽/缩放/选中/搜索/连线）
-    └── Modals.tsx                  # 3个弹窗（EditNodeModal / DuplicateModal / EditConnectionModal，全部受控组件）
+    ├── HomeScreen.tsx              # 首页（创建/选择/导入导出/自动备份开关）
+    ├── MindMap.tsx                 # 画布主组件
+    └── Modals.tsx                  # 弹窗（全部受控组件）
 ```
 
 ## 关键约定
 
-- 主动调用开发类 skill，根据任务匹配已安装的 skill（如 improve-codebase-architecture、prototype、diagnose、tdd 等）
+- 主动调用开发类 skill，根据任务匹配已安装的 skill
 - 所有组件用函数式 + Hooks，禁止 class 组件
-- 弹窗表单必须用受控组件（useState），禁止直接修改对象属性
-- 拖拽激活时，`nodeStyle` 必须输出与 DOM 直操一致的 transform（通过 `dragState.screenX/Y`），禁止用 `{left:0,top:0}` 等空值，否则 React 渲染会覆盖 DOM transform 导致缩放下偏移
-- 交付前必须在本地浏览器中验证核心操作：添加节点、拖拽（正常/缩放后）、连线显示、悬停预览
-- 提交前确保本地 dev server 正常运行，确认线上 Vercel 已同步更新
+- **拖拽**：Pointer Events + `setPointerCapture`，世界坐标步长公式 `屏幕像素差/缩放=世界坐标差`，直接 `setNodes` 走 React 渲染。3px 阈值区分点击和拖拽。
+- **pointerdown 禁止 e.preventDefault()**：会吞掉 click 事件导致选中逻辑断裂
+- **弹窗**：必须用受控组件（useState），禁止直接修改对象属性
+- **坐标变换**：统一用 `lib/coordinates.ts` 纯函数；替换函数引用前确认参数签名完全匹配
+- **缩放/平移**：用 ref 存储最新值（panRef/scaleRef），避免事件监听器闭包过期
+- **撤销/重做**：快照栈（useUndo），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect
+- **数据变更**后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
+- **提交前**：`npx tsc --noEmit` 零错误；本地 dev server 运行正常；验证拖拽（多缩放级别）、连线、悬停、undo/redo
 - 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
-- 缩放和平移用 ref 存储最新值（`panRef`/`scaleRef`），避免事件监听器中的闭包过期
-- 坐标变换统一用 `lib/coordinates.ts` 纯函数，不内联在组件里
-- 撤销/重做用快照栈（`useUndo`），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect 避免重复快照
-- ID 生成用 `Math.random().toString(36)`，非安全场景够用
-- 数据变更后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
-- 类型检查通过（`npx tsc --noEmit` 零错误）才能提交
 
 ## 构建命令
 
