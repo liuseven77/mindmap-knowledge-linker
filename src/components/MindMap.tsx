@@ -147,12 +147,25 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     e.preventDefault();
   };
 
-  // ── Node Drag (DOM-based — zero React overhead) ──
+  // ── Node Drag ──
 
   const dragOffset = useRef({ x: 0, y: 0 });
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const dragPending = useRef<string | null>(null);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
+      // Activate drag if pending and crossed threshold
+      if (dragPending.current) {
+        const dx = Math.abs(e.clientX - dragStartPos.current.x);
+        const dy = Math.abs(e.clientY - dragStartPos.current.y);
+        if (dx < 3 && dy < 3) return;
+        draggingId.current = dragPending.current;
+        dragPending.current = null;
+        const el = nodeEls.current.get(draggingId.current!);
+        if (el) el.style.zIndex = '50';
+      }
+
       const id = draggingId.current;
       if (!id) return;
       const el = nodeEls.current.get(id);
@@ -169,6 +182,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
     const onUp = () => {
       const id = draggingId.current;
+      dragPending.current = null;
       if (!id) return;
       const el = nodeEls.current.get(id);
       const canvas = canvasRef.current;
@@ -196,8 +210,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
       draggingId.current = null;
     };
 
-    const onLeave = () => { draggingId.current = null; };
-    const onBlur = () => { draggingId.current = null; };
+    const onLeave = () => { dragPending.current = null; draggingId.current = null; };
+    const onBlur = () => { dragPending.current = null; draggingId.current = null; };
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
@@ -218,8 +232,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     e.preventDefault();
     const el = nodeEls.current.get(nodeId);
     if (!el) return;
-    draggingId.current = nodeId;
-    el.style.zIndex = '50';
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    dragPending.current = nodeId;
     const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
     if (m) {
       const nodeLeft = parseFloat(m[1]);
