@@ -169,23 +169,25 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     el.style.zIndex = '50';
     el.style.touchAction = 'none';
 
+    const rect = canvasRef.current!.getBoundingClientRect();
+
+    // Read current screen position from the DOM element's inline transform
     const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
-    let ox = 0, oy = 0;
+    let domX = 0, domY = 0;
     if (m) {
-      const nodeLeft = parseFloat(m[1]);
-      const nodeTop = parseFloat(m[2]);
-      const canvasRect = canvasRef.current!.getBoundingClientRect();
-      ox = e.clientX - canvasRect.left - nodeLeft - 60;
-      oy = e.clientY - canvasRect.top - nodeTop - 20;
+      domX = parseFloat(m[1]) + 60;
+      domY = parseFloat(m[2]) + 20;
     }
 
     dragState.current = {
       nodeId,
-      offsetX: ox,
-      offsetY: oy,
+      offsetX: e.clientX - rect.left - domX,
+      offsetY: e.clientY - rect.top - domY,
       startX: e.clientX,
       startY: e.clientY,
       active: false,
+      screenX: domX,
+      screenY: domY,
     };
   };
 
