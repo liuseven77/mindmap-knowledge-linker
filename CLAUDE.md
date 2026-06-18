@@ -37,6 +37,7 @@ src/
 - 拖拽激活时，`nodeStyle` 必须输出与 DOM 直操一致的 transform（通过 `dragState.screenX/Y`），禁止用 `{left:0,top:0}` 等空值，否则 React 渲染会覆盖 DOM transform 导致缩放下偏移
 - 交付前必须在本地浏览器中验证核心操作：添加节点、拖拽（正常/缩放后）、连线显示、悬停预览
 - 提交前确保本地 dev server 正常运行，确认线上 Vercel 已同步更新
+- 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
 - 缩放和平移用 ref 存储最新值（`panRef`/`scaleRef`），避免事件监听器中的闭包过期
 - 坐标变换统一用 `lib/coordinates.ts` 纯函数，不内联在组件里
 - 撤销/重做用快照栈（`useUndo`），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect 避免重复快照
