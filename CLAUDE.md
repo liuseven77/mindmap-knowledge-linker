@@ -43,6 +43,7 @@ src/
 - **数据变更**后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
 - **提交前**：`npx tsc --noEmit` 零错误；本地 dev server 运行正常；验证拖拽（多缩放级别）、连线、悬停、undo/redo
 - 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
+- 提示词模板见 [vibe-coding-经验.md](vibe-coding-经验.md)（给用户的协作指南）
 
 ## 构建命令
 
