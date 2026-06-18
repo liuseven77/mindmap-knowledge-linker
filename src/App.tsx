@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Node, Connection, Notebook } from './types';
 import { generateId } from './types';
 import { storage } from './storage';
+import { autoExportIfEnabled } from './autoExport';
 import { HomeScreen } from './components/HomeScreen';
 import { MindMap } from './components/MindMap';
 
@@ -20,6 +21,7 @@ export default function App() {
     };
     notebooks.push(nb);
     storage.save(notebooks);
+    autoExportIfEnabled(notebooks);
     setActiveId(nb.id);
   };
 
@@ -31,6 +33,7 @@ export default function App() {
       notebooks[idx].connections = connections;
       notebooks[idx].updatedAt = new Date().toISOString();
       storage.save(notebooks);
+      autoExportIfEnabled(notebooks);
     }
   };
 

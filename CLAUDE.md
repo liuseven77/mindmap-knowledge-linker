@@ -27,6 +27,7 @@ src/
 
 ## 关键约定
 
+- 主动调用开发类skill，比如superpower提供的14个技能
 - 所有组件用函数式 + Hooks，禁止 class 组件
 - 拖拽用 DOM 直接操作（`el.style.transform`），不通过 React state，确保 60fps
 - 缩放和平移用 ref 存储最新值（`panRef`/`scaleRef`），避免事件监听器中的闭包过期

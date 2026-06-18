@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react';
-import { BookOpen, BookPlus, Clock, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { BookOpen, BookPlus, Clock, Plus, Trash2, Download, Upload, FolderSync } from 'lucide-react';
 import type { Notebook } from '../types';
 import { storage } from '../storage';
+import { pickExportFolder, isAutoExportEnabled, disableAutoExport } from '../autoExport';
 
 interface HomeScreenProps {
   onCreate: (name: string) => void;
@@ -11,7 +12,12 @@ interface HomeScreenProps {
 export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
   const [name, setName] = useState('');
   const [notebooks, setNotebooks] = useState<Notebook[]>(() => storage.load());
+  const [autoExport, setAutoExport] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    isAutoExportEnabled().then(setAutoExport);
+  }, []);
 
   const handleCreate = () => {
     const trimmed = name.trim();
@@ -139,7 +145,7 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
           <h2 className="text-lg font-semibold text-amber-800 mb-4 flex items-center gap-2">
             <Download size={20} />数据管理
           </h2>
-          <div className="flex gap-3">
+          <div className="flex gap-3 mb-3">
             <button onClick={handleExportAll}
               className="flex-1 px-4 py-3 bg-white hover:bg-amber-50 text-amber-700 rounded-xl
                          border-2 border-amber-200 hover:border-amber-300 font-medium
@@ -154,8 +160,31 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
             </button>
             <input ref={importRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
           </div>
+          <div className="flex gap-3">
+            {autoExport ? (
+              <button
+                onClick={() => { disableAutoExport(); setAutoExport(false); }}
+                className="flex-1 px-4 py-3 bg-green-50 hover:bg-red-50 text-green-700 hover:text-red-600 rounded-xl
+                           border-2 border-green-200 hover:border-red-200 font-medium
+                           transition-all flex items-center justify-center gap-2">
+                <FolderSync size={18} />自动备份已开启 — 点击关闭
+              </button>
+            ) : (
+              <button
+                onClick={async () => {
+                  const ok = await pickExportFolder();
+                  if (ok) setAutoExport(true);
+                  else if (!window.showDirectoryPicker) alert('当前浏览器不支持自动备份，请使用 Chrome 或 Edge');
+                }}
+                className="flex-1 px-4 py-3 bg-white hover:bg-green-50 text-amber-700 hover:text-green-700 rounded-xl
+                           border-2 border-amber-200 hover:border-green-300 font-medium
+                           transition-all flex items-center justify-center gap-2">
+                <FolderSync size={18} />开启自动备份
+              </button>
+            )}
+          </div>
           <p className="text-xs text-amber-400 mt-2 text-center">
-            导入会合并已有数据，同名链接本将被覆盖
+            自动备份：每次数据变更自动导出 JSON 到本地文件夹（需要 Chrome/Edge 浏览器）
           </p>
         </div>
       </div>
