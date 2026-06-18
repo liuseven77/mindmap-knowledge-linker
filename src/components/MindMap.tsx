@@ -59,7 +59,9 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     return Math.min(1 + n * 0.08, 1.5);
   };
 
-  const screenPos = worldToScreen;
+  const screenPos = useCallback((x: number, y: number, cw: number, ch: number) =>
+    worldToScreen(x, y, { panX: panRef.current.x, panY: panRef.current.y, scale: scaleRef.current, canvasW: cw, canvasH: ch }),
+  []);
 
 
   // ── Add / Delete ──────────────────────────────
