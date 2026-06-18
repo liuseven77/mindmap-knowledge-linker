@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, Link2, Edit3, Plus, Trash2, Move, RotateCcw, Sparkles,
-  ArrowLeft, Search, Download, Undo2, Redo2
+  ArrowLeft, Search, Download, Undo2, Redo2, ExternalLink, ListTree
 } from 'lucide-react';
 import type { Node, Connection, Notebook } from '../types';
 import { generateId } from '../types';
@@ -28,6 +28,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [showBacklinks, setShowBacklinks] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeEls = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -252,6 +253,26 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
   const getNodeName = (id: string) => nodes.find(n => n.id === id)?.name || '';
 
+  // ── Backlinks ─────────────────────────────────
+
+  const selectedArray = Array.from(selectedNodes);
+  const focusedNodeId = selectedArray.length === 1 ? selectedArray[0] : null;
+
+  const backlinks = focusedNodeId
+    ? connections
+        .filter(c => c.fromId === focusedNodeId || c.toId === focusedNodeId)
+        .map(c => {
+          const otherId = c.fromId === focusedNodeId ? c.toId : c.fromId;
+          const otherNode = nodes.find(n => n.id === otherId);
+          return { connection: c, otherNode, direction: c.fromId === focusedNodeId ? 'out' as const : 'in' as const };
+        })
+        .filter(b => b.otherNode)
+    : [];
+
+  const orphanCount = nodes.filter(n => {
+    return !connections.some(c => c.fromId === n.id || c.toId === n.id);
+  }).length;
+
   // ── Render ────────────────────────────────────
 
   const canvas = canvasRef.current;
@@ -371,6 +392,10 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
               <X size={16} />清空选中
             </button>
             {selectedNodes.size === 1 && <>
+              <button onClick={() => setShowBacklinks(true)}
+              className="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-medium shadow-md transition-all flex items-center gap-2">
+                <ListTree size={16} />查看关联
+              </button>
               <button onClick={() => {
                 const n = nodes.find(x => x.id === Array.from(selectedNodes)[0]);
                 if (n) setEditingNode(n);
@@ -424,7 +449,76 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
         </div>
       )}
 
-      {/* Canvas */}
+      {/* Backlinks panel */}
+      {showBacklinks && focusedNodeId && (
+        <div className="fixed right-4 top-24 z-50 w-80 max-h-[70vh] bg-white/95 backdrop-blur-sm
+                      rounded-2xl shadow-xl border border-amber-200 overflow-hidden flex flex-col">
+          <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-3 flex items-center justify-between">
+            <h3 className="font-semibold text-white flex items-center gap-2">
+              <ListTree size={18} />
+              {getNodeName(focusedNodeId)}
+            </h3>
+            <button onClick={() => setShowBacklinks(false)}
+              className="text-white/80 hover:text-white"><X size={20} /></button>
+          </div>
+          <div className="overflow-y-auto flex-1 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm text-amber-600">
+              <Link2 size={14} />
+              <span>{backlinks.length} 条关联</span>
+            </div>
+            {backlinks.length === 0 ? (
+              <p className="text-sm text-amber-400 text-center py-4">此节点尚未与其他节点建立联系</p>
+            ) : (
+              backlinks.map(({ connection, otherNode, direction }) => (
+                <div key={connection.id}
+                  className="bg-amber-50 rounded-xl p-3 border border-amber-100">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-amber-500 flex items-center gap-1">
+                      {direction === 'out' ? '→' : '←'} {otherNode!.name}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingConnection(connection);
+                          setShowConnectionModal(true);
+                        }}
+                        className="p-1 rounded-lg text-amber-400 hover:text-amber-600 hover:bg-amber-100 transition-colors"
+                        title="编辑联系内容"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Jump to the other node
+                          const canvas = canvasRef.current;
+                          if (!canvas) return;
+                          const { panX, panY } = panToCenter(otherNode!.x, otherNode!.y, {
+                            panX: panRef.current.x, panY: panRef.current.y,
+                            scale: scaleRef.current,
+                            canvasW: canvas.clientWidth,
+                            canvasH: canvas.clientHeight,
+                          });
+                          setPan({ x: panX, y: panY });
+                          setSelectedNodes(new Set([otherNode!.id]));
+                        }}
+                        className="p-1 rounded-lg text-amber-400 hover:text-amber-600 hover:bg-amber-100 transition-colors"
+                        title="跳转到此节点"
+                      >
+                        <ExternalLink size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  {connection.content ? (
+                    <p className="text-sm text-amber-800 whitespace-pre-wrap">{connection.content}</p>
+                  ) : (
+                    <p className="text-sm text-amber-400 italic">无联系说明</p>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
       <div
         ref={canvasRef}
         onWheel={handleWheel}

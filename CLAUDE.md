@@ -15,32 +15,40 @@
 ```
 src/
 ├── App.tsx                        # 根路由：首页 ↔ 画布
-├── types.ts                       # 类型定义 + localStorage 工具函数
+├── types.ts                       # 纯类型定义（Node, Connection, Notebook）
+├── storage.ts                     # 存储接口 + localStorage 适配器（为 Supabase 预留）
+├── autoExport.ts                  # 自动备份：File System Access API 定时导出 JSON
 ├── useUndo.ts                     # 撤销/重做 Hook
 ├── index.css                      # Tailwind 指令
 ├── main.tsx                       # React 入口
+├── lib/
+│   └── coordinates.ts             # 坐标变换纯函数（worldToScreen / screenToWorld / panToCenter / nodeTransform）
 └── components/
-    ├── HomeScreen.tsx              # 首页（笔记本创建/选择/导入导出）
-    ├── MindMap.tsx                 # 画布主组件（541行，包含拖拽/缩放/选中/搜索）
-    └── Modals.tsx                  # 3个弹窗（编辑节点/重复名确认/编辑连线）
+    ├── HomeScreen.tsx              # 首页（笔记本创建/选择/导入导出/自动备份开关）
+    ├── MindMap.tsx                 # 画布主组件（拖拽/缩放/选中/搜索/连线）
+    └── Modals.tsx                  # 3个弹窗（EditNodeModal / DuplicateModal / EditConnectionModal，全部受控组件）
 ```
 
 ## 关键约定
 
-- 主动调用开发类skill，比如superpower提供的14个技能
+- 主动调用开发类 skill，根据任务匹配已安装的 skill（如 improve-codebase-architecture、prototype、diagnose、tdd 等）
 - 所有组件用函数式 + Hooks，禁止 class 组件
+- 弹窗表单必须用受控组件（useState），禁止直接修改对象属性
 - 拖拽用 DOM 直接操作（`el.style.transform`），不通过 React state，确保 60fps
 - 缩放和平移用 ref 存储最新值（`panRef`/`scaleRef`），避免事件监听器中的闭包过期
-- 世界坐标 ↔ 屏幕坐标变换通过 `screenPos()` 统一处理
-- 撤销/重做用快照栈（`useUndo`），Ctrl+Z / Ctrl+Shift+Z
+- 坐标变换统一用 `lib/coordinates.ts` 纯函数，不内联在组件里
+- 撤销/重做用快照栈（`useUndo`），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect 避免重复快照
 - ID 生成用 `Math.random().toString(36)`，非安全场景够用
+- 数据变更后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
+- 类型检查通过（`npx tsc --noEmit` 零错误）才能提交
 
 ## 构建命令
 
 ```bash
 npm run dev          # 启动开发服务器 (localhost:5173)
-npm run build        # 生产构建
-npm run typecheck    # TypeScript 类型检查
+npm run build        # 生产构建（dist/）
+npm run preview      # 预览生产构建 (localhost:4173)
+npm run typecheck    # TypeScript 类型检查（提交前必须通过）
 ```
 
 ## 数据流
@@ -54,7 +62,15 @@ localStorage ("mindmap_notebooks")
         └── updatedAt
 
 App.tsx:
-  loadNotebooks() → 传给 HomeScreen 或 MindMap
-  MindMap 通过 onUpdate(nodes, connections) → handleUpdate() → saveNotebooks()
+  storage.load() → 传给 HomeScreen 或 MindMap
+  MindMap 通过 onUpdate(nodes, connections) → handleUpdate() → storage.save() + autoExportIfEnabled()
   useUndo 在 MindMap 内部管理 nodes/connections 状态并自动记录快照
+
+存储适配器 (storage.ts):
+  interface NotebookStorage { load(), save() }
+  LocalStorageAdapter 实现，SupabaseAdapter 预留接口
+
+自动备份 (autoExport.ts):
+  用户选一次本地文件夹 → File System Access API 写入 JSON
+  每次 storage.save() 触发静默导出，文件名带时间戳，不覆盖历史版本
 ```
