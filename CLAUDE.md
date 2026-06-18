@@ -34,7 +34,9 @@ src/
 - 主动调用开发类 skill，根据任务匹配已安装的 skill（如 improve-codebase-architecture、prototype、diagnose、tdd 等）
 - 所有组件用函数式 + Hooks，禁止 class 组件
 - 弹窗表单必须用受控组件（useState），禁止直接修改对象属性
-- 拖拽用 DOM 直接操作（`el.style.transform`），不通过 React state，确保 60fps
+- 拖拽激活时，`nodeStyle` 必须输出与 DOM 直操一致的 transform（通过 `dragState.screenX/Y`），禁止用 `{left:0,top:0}` 等空值，否则 React 渲染会覆盖 DOM transform 导致缩放下偏移
+- 交付前必须在本地浏览器中验证核心操作：添加节点、拖拽（正常/缩放后）、连线显示、悬停预览
+- 提交前确保本地 dev server 正常运行，确认线上 Vercel 已同步更新
 - 缩放和平移用 ref 存储最新值（`panRef`/`scaleRef`），避免事件监听器中的闭包过期
 - 坐标变换统一用 `lib/coordinates.ts` 纯函数，不内联在组件里
 - 撤销/重做用快照栈（`useUndo`），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect 避免重复快照
