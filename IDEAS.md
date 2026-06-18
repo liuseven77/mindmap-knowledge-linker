@@ -21,8 +21,11 @@
 - [x] 存储接口抽象（storage.ts，为多适配器做准备）
 - [x] CLAUDE.md 项目文档
 - [x] 架构审查 HTML 报告
+- [x] LESSONS.md 踩坑经验录
 
 ---
+
+## 🐛 已修复的重要 Bug
 
 ## 🔥 AI 集成（核心竞争力）
 
