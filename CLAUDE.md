@@ -32,7 +32,7 @@ src/
 
 ## 关键约定
 
-- 主动调用开发类 skill，根据任务匹配已安装的 skill
+- 主动调用 superpowers skill 体系：brainstorming / writing-plans / executing-plans / subagent-driven-development / systematic-debugging / test-driven-development / verification-before-completion / requesting-code-review / finishing-a-development-branch 等
 - 所有组件用函数式 + Hooks，禁止 class 组件
 - **拖拽**：Pointer Events + `setPointerCapture`，世界坐标步长公式 `屏幕像素差/缩放=世界坐标差`，直接 `setNodes` 走 React 渲染。3px 阈值区分点击和拖拽。
 - **pointerdown 禁止 e.preventDefault()**：会吞掉 click 事件导致选中逻辑断裂
