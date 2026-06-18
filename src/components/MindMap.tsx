@@ -157,7 +157,9 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     offsetY: number;
     startX: number;
     startY: number;
-    active: boolean; // true after 3px threshold
+    active: boolean;
+    screenX: number;
+    screenY: number;
   } | null>(null);
 
   const handlePointerDown = (e: React.PointerEvent, nodeId: string) => {
@@ -206,6 +208,9 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     const sc = scaleRef.current;
     const mx = (e.clientX - rect.left) - ds.offsetX;
     const my = (e.clientY - rect.top) - ds.offsetY;
+    // Store current screen position so nodeStyle can mirror it during React renders
+    ds.screenX = mx;
+    ds.screenY = my;
 
     el.style.transform = `translate(${mx - 60}px, ${my - 20}px) scale(${getNodeSize(ds.nodeId) * sc})`;
   };
@@ -303,9 +308,15 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const ch = canvas?.clientHeight ?? 600;
 
   const nodeStyle = (node: Node): React.CSSProperties => {
-    // Skip React rendering while this node is actively dragged — DOM handles the position
-    if (dragState.current?.nodeId === node.id && dragState.current.active) {
-      return { left: 0, top: 0 };
+    // During active drag, output the DOM-calculated screen position to avoid transform conflicts
+    const ds = dragState.current;
+    if (ds?.nodeId === node.id && ds.active) {
+      const sc = scaleRef.current;
+      const sz = getNodeSize(node.id);
+      return {
+        left: 0, top: 0,
+        transform: `translate(${ds.screenX - 60}px, ${ds.screenY - 20}px) scale(${sz * sc})`,
+      };
     }
     const sz = getNodeSize(node.id);
     return {
