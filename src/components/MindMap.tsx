@@ -320,7 +320,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                    placeholder="搜索节点..."
+                    placeholder="搜索节点名称..."
                     className="w-40 pl-9 pr-3 py-2 rounded-xl border-2 border-amber-200
                              focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100
                              bg-white/90 text-amber-900 placeholder-amber-400 text-sm transition-all"
@@ -329,7 +329,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
                 <input type="text" value={newNodeName}
                   onChange={(e) => setNewNodeName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addNode()}
-                  placeholder="输入节点名称..."
+                  placeholder="添加节点，输入名称后按 Enter 或点击右侧添加按钮"
                   className="flex-1 sm:w-64 px-4 py-2 rounded-xl border-2 border-amber-200
                            focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100
                            bg-white/90 text-amber-900 placeholder-amber-400 transition-all"

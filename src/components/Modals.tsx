@@ -32,7 +32,7 @@ export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
             <label className="block text-sm font-medium text-amber-700 mb-2">节点内容</label>
             <textarea value={content}
               onChange={e => setContent(e.target.value)}
-              rows={4} placeholder="在此输入节点的详细内容..."
+              rows={4} placeholder="输入节点的详细内容，如定义、要点、来源等。Ctrl+Z 可撤销输入。"
               className="w-full px-4 py-3 rounded-xl border-2 border-amber-200
                        focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100
                        text-amber-900 placeholder-amber-300 resize-none" />
@@ -117,7 +117,7 @@ export function EditConnectionModal({ connection, fromName, toName, onSave, onDe
             <label className="block text-sm font-medium text-green-700 mb-2">联系内容</label>
             <textarea value={content}
               onChange={e => setContent(e.target.value)}
-              rows={4} placeholder="描述这两个节点之间的关系..."
+              rows={4} placeholder="描述这两个节点之间的关系，如因果关系、相似性、前提条件等。Ctrl+Z 可撤销输入。"
               className="w-full px-4 py-3 rounded-xl border-2 border-green-200
                        focus:border-green-400 focus:outline-none focus:ring-2 focus:ring-green-100
                        text-gray-800 placeholder-green-300 resize-none" />
