@@ -150,4 +150,24 @@ const editingNode = { ...node };
 
 ---
 
-> 最近更新：2026-06-21（新增第 11 条经验）
+## 12. Ctrl+Z 全局撤销与文本框编辑冲突
+
+**根因**：`document.addEventListener('keydown')` 监听了所有键盘事件。用户在 textarea/input 里按 Ctrl+Z 想撤销刚才打错的字，结果同时触发了画布节点的 undo。
+
+**修复**：键盘事件入口检测 `e.target.tagName`，如果是 `INPUT`、`TEXTAREA` 或 `contentEditable`，直接 `return` 跳过全局处理。
+
+**教训**：全局快捷键必须判断焦点上下文。文本框内的快捷键留给浏览器默认行为，只在画布空白区域才拦截。
+
+---
+
+## 13. Vercel CLI TLS 被网络阻断
+
+**根因**：Windows 下 `npx vercel` 的 CLI 直连 `vercel.com` 进行 OAuth 认证，TLS 握手阶段被网络环境拒绝（与 Git HTTPS 443 症状相同）。
+
+**绕过**：在 Vercel Dashboard 网页手动 Import GitHub 仓库并开启自动部署。之后每次 `git push` 自动触发，无需 CLI。
+
+**教训**：CLI 工具直连国外服务在特定网络环境下不可靠。Vercel 提供 GitHub 集成作为替代部署路径。
+
+---
+
+> 最近更新：2026-06-21（新增第 12、13 条经验）

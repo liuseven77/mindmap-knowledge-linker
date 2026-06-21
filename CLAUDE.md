@@ -18,8 +18,9 @@ src/
 ├── App.tsx                        # 根路由：首页 ↔ 画布
 ├── types.ts                       # 纯类型定义（Node, Connection, Notebook）
 ├── storage.ts                     # 存储接口 + localStorage 适配器（为 Supabase 预留）
+├── autoExport.ts                  # 自动备份（File System Access API + IndexedDB）
 ├── services/
-│   └── ai.ts                   # AI API 调用封装（OpenAI 兼容，Vite proxy 解决 CORS）
+│   └── ai.ts                   # AI API 调用封装（OpenAI 兼容，Vite proxy / Vercel rewrites 解决 CORS）
 ├── useUndo.ts                     # 撤销/重做 Hook（快照栈，50 步，skipInitial）
 ├── index.css                      # Tailwind 指令
 ├── main.tsx                       # React 入口
@@ -42,11 +43,13 @@ src/
 - **弹窗**：必须用受控组件（useState），禁止直接修改对象属性
 - **坐标变换**：统一用 `lib/coordinates.ts` 纯函数；替换函数引用前确认参数签名完全匹配
 - **缩放/平移**：用 ref 存储最新值（panRef/scaleRef），避免事件监听器闭包过期
-- **撤销/重做**：快照栈（useUndo），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect
+- **撤销/重做**：快照栈（useUndo），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect。键盘事件中检测 `e.target.tagName`，INPUT/TEXTAREA 内跳过全局快捷键，避免与文本编辑冲突。
+- **编辑后取消选中**：保存弹窗时 `setSelectedNodes(new Set())`，避免编辑完还保持选中状态。
 - **数据变更**后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
 - **提交前**：`npx tsc --noEmit` 零错误；本地 dev server 运行正常；验证拖拽（多缩放级别）、连线、悬停、undo/redo
 - 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
 - 提示词模板见 [vibe-coding-经验.md](vibe-coding-经验.md)（给用户的协作指南）
+- **AI API 代理**：开发用 Vite proxy（`/api/chat` → `api.deepseek.com`），生产用 `vercel.json` rewrites
 
 ## 构建命令
 
