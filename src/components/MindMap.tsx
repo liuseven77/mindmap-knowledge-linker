@@ -47,6 +47,9 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable;
+      if (isInput) return;
       if (e.ctrlKey || e.metaKey) {
         if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         if (e.key === 'Z' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); }
@@ -635,7 +638,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
       {editingNode && (
         <EditNodeModal
           node={editingNode}
-          onSave={(updated) => setNodes(prev => prev.map(n => n.id === updated.id ? updated : n))}
+          onSave={(updated) => { setNodes(prev => prev.map(n => n.id === updated.id ? updated : n)); setSelectedNodes(new Set()); }}
           onClose={() => setEditingNode(null)}
         />
       )}
