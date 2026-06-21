@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  X, Send, Settings, Lightbulb, FileText, GitCompare, BrainCircuit
+  X, Send, Settings, Lightbulb, FileText, GitCompare, BrainCircuit, FilePenLine
 } from 'lucide-react';
 import type { Node, Connection } from '../types';
 import { chat, loadConfig, saveConfig, AIConfig } from '../services/ai';
@@ -77,6 +77,13 @@ export function AIPanel({ nodes, connections, selectedNodes, getNodeName, onClos
       );
       if (!conn) return;
       prompt = `节点"${nodeA.name}"：${nodeA.content || '（无内容）'}\n节点"${nodeB.name}"：${nodeB.content || '（无内容）'}\n连线描述："${conn.content || '（无）'}"\n\n请检查这条连线描述是否准确反映了两者关系，有没有遗漏或错误。`;
+    } else if (action === 'polish_conn' && selectedArray.length === 2) {
+      const [a, b] = selectedArray;
+      const conn = connections.find(
+        c => (c.fromId === a && c.toId === b) || (c.fromId === b && c.toId === a)
+      );
+      if (!conn || !conn.content) return;
+      prompt = `请润色以下连线描述：修正错别字，优化表达使其更清晰流畅。保留原意和风格，不要大幅改写。\n\n"${conn.content}"`;
     } else return;
 
     const newMsgs = [...messages, { role: 'user' as const, content: prompt }];
@@ -100,6 +107,13 @@ export function AIPanel({ nodes, connections, selectedNodes, getNodeName, onClos
     c => (c.fromId === selectedArray[0] && c.toId === selectedArray[1]) ||
          (c.fromId === selectedArray[1] && c.toId === selectedArray[0])
   );
+  const canPolishConn = selectedArray.length === 2 && (() => {
+    const conn = connections.find(
+      c => (c.fromId === selectedArray[0] && c.toId === selectedArray[1]) ||
+           (c.fromId === selectedArray[1] && c.toId === selectedArray[0])
+    );
+    return !!(conn && conn.content);
+  })();
 
   return (
     <>
@@ -155,6 +169,16 @@ export function AIPanel({ nodes, connections, selectedNodes, getNodeName, onClos
             }`}
             title={!canCheck ? '请选中两个已连线的节点' : ''}>
             <GitCompare size={13} />检查关系
+          </button>
+          <button
+            onClick={() => handleQuickAction('polish_conn')} disabled={!canPolishConn}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+              canPolishConn
+                ? 'bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200'
+                : 'bg-gray-50 text-gray-300 border border-gray-100 cursor-not-allowed'
+            }`}
+            title={!canPolishConn ? '请选中两个已连线且有连线内容的节点' : ''}>
+            <FilePenLine size={13} />润色连线
           </button>
         </div>
 
