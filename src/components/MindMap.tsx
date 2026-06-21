@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   X, Link2, Edit3, Plus, Trash2, Move, RotateCcw, Sparkles,
-  ArrowLeft, Search, Download, Undo2, Redo2, ExternalLink, ListTree
+  ArrowLeft, Search, Download, Undo2, Redo2, ExternalLink, ListTree, BrainCircuit
 } from 'lucide-react';
 import type { Node, Connection, Notebook } from '../types';
 import { generateId } from '../types';
 import { useUndo } from '../useUndo';
 import { EditNodeModal, DuplicateModal, EditConnectionModal } from './Modals';
+import { AIPanel } from './AIPanel';
 import { worldToScreen, screenToWorld, panToCenter, nodeTransform } from '../lib/coordinates';
 
 interface MindMapProps {
@@ -29,6 +30,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [showBacklinks, setShowBacklinks] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeEls = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -356,6 +358,16 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
                            border-2 border-amber-200 hover:border-amber-300 transition-all">
                   <RotateCcw size={20} />
                 </button>
+                <button
+                  onClick={() => setShowAIPanel(!showAIPanel)}
+                  className={`p-2 rounded-xl border-2 transition-all ${
+                    showAIPanel
+                      ? 'bg-purple-100 text-purple-600 border-purple-300'
+                      : 'bg-white hover:bg-purple-50 text-purple-500 border-purple-200 hover:border-purple-300'
+                  }`}
+                  title="AI 助手">
+                  <BrainCircuit size={20} />
+                </button>
                 <button onClick={() => {
                   const data = JSON.stringify({ nodes, connections, name: notebook.name }, null, 2);
                   const blob = new Blob([data], { type: 'application/json' });
@@ -451,7 +463,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
       {/* Backlinks panel */}
       {showBacklinks && focusedNodeId && (
-        <div className="fixed right-4 top-24 z-50 w-80 max-h-[70vh] bg-white/95 backdrop-blur-sm
+        <div className="fixed left-4 top-24 z-50 w-80 max-h-[70vh] bg-white/95 backdrop-blur-sm
                       rounded-2xl shadow-xl border border-amber-200 overflow-hidden flex flex-col">
           <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-4 py-3 flex items-center justify-between">
             <h3 className="font-semibold text-white flex items-center gap-2">
@@ -608,6 +620,16 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
           </div>
         )}
       </div>
+
+      {showAIPanel && (
+        <AIPanel
+          nodes={nodes}
+          connections={connections}
+          selectedNodes={selectedNodes}
+          getNodeName={getNodeName}
+          onClose={() => setShowAIPanel(false)}
+        />
+      )}
 
       {/* Modals */}
       {editingNode && (

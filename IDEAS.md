@@ -19,10 +19,11 @@
 - [x] 撤销/重做（Ctrl+Z / Ctrl+Shift+Z，50 步）
 - [x] 坐标变换纯函数模块（lib/coordinates.ts）
 - [x] 存储接口抽象（storage.ts，为 Supabase 预留）
-- [x] **反向链接面板** — 选中单节点查看所有关联及连线内容
+- [x] **反向链接面板** — 左侧弹出，查看关联及连线内容
+- [x] **AI 面板** — 右侧对话窗口，探索关联/润色内容/检查关系/自由提问，兼容 OpenAI 格式 API
 - [x] **PWA** — 浏览器可安装为独立桌面应用，全离线可用
 - [x] **Vercel 部署** — https://project-mu-lilac-98.vercel.app
-- [x] **CLAUDE.md** + **LESSONS.md** 项目文档
+- [x] **AI 面板** — 右侧对话窗口，支持探索关联/润色内容/检查关系/自由提问，兼容 OpenAI 格式 API
 
 ---
 

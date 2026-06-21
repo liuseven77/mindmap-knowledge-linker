@@ -26,6 +26,15 @@ export default defineConfig({
       },
     }),
   ],
+  server: {
+    proxy: {
+      '/api/chat': {
+        target: 'https://api.deepseek.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/chat/, '/v1/chat/completions'),
+      },
+    },
+  },
   optimizeDeps: {
     exclude: ['lucide-react'],
   },

@@ -140,4 +140,14 @@ const editingNode = { ...node };
 
 ---
 
-> 最近更新：2026-06-18（新增第 2-10 条经验）
+## 11. 浏览器直接调 AI API 被 CORS 拦截
+
+**根因**：浏览器对跨域请求有安全限制。AI API（DeepSeek/OpenAI 等）服务器不设置 CORS 头，浏览器直接 fetch 会报 `Failed to fetch`。
+
+**修复**：Vite 开发模式下用 `server.proxy` 代理 `/api/chat` → `https://api.deepseek.com/v1/chat/completions`，绕过 CORS。生产环境可在 Vercel 配置类似的 rewrite 规则。
+
+**教训**：浏览器直调第三方 API 大概率遇到 CORS。开发时用 Vite proxy 解决，部署时用 Vercel rewrites。
+
+---
+
+> 最近更新：2026-06-21（新增第 11 条经验）
