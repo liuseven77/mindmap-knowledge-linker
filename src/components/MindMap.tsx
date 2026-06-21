@@ -397,7 +397,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
       {/* Floating toolbar */}
       {selectedNodes.size > 0 && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[70]
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[70]
                       bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-amber-100
                       px-4 py-3 flex flex-col gap-3 min-w-[320px]">
           <div className="flex items-center gap-3 flex-wrap justify-center">
