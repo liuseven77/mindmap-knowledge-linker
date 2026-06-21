@@ -18,7 +18,8 @@ src/
 ├── App.tsx                        # 根路由：首页 ↔ 画布
 ├── types.ts                       # 纯类型定义（Node, Connection, Notebook）
 ├── storage.ts                     # 存储接口 + localStorage 适配器（为 Supabase 预留）
-├── autoExport.ts                  # 自动备份：File System Access API 导出 JSON
+├── services/
+│   └── ai.ts                   # AI API 调用封装（OpenAI 兼容，Vite proxy 解决 CORS）
 ├── useUndo.ts                     # 撤销/重做 Hook（快照栈，50 步，skipInitial）
 ├── index.css                      # Tailwind 指令
 ├── main.tsx                       # React 入口
@@ -27,6 +28,8 @@ src/
 └── components/
     ├── HomeScreen.tsx              # 首页（创建/选择/导入导出/自动备份开关）
     ├── MindMap.tsx                 # 画布主组件
+    ├── AIPanel.tsx                 # AI 助手面板（探索关联/润色内容/检查关系/自由提问）
+    ├── AISettings.tsx              # AI 配置弹窗（API Key + 模型名）
     └── Modals.tsx                  # 弹窗（全部受控组件）
 ```
 
