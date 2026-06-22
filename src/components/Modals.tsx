@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import type { Node, Connection } from '../types';
+import type { NodeType } from '../types';
+import { NODE_TYPE_COLORS, NODE_TYPE_OPTIONS } from '../types';
 
 interface EditNodeModalProps {
   node: Node;
@@ -11,16 +13,40 @@ interface EditNodeModalProps {
 export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
   const [name, setName] = useState(node.name);
   const [content, setContent] = useState(node.content);
+  const [type, setType] = useState<NodeType>(node.type || 'concept');
+  const colors = NODE_TYPE_COLORS[type];
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={onClose}>
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-4 flex items-center justify-between">
+        <div className="px-6 py-4 flex items-center justify-between" style={{ background: `linear-gradient(to right, ${colors.bg}, ${colors.bg}cc)` }}>
           <h2 className="text-lg font-semibold text-white">编辑节点</h2>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X size={24} /></button>
         </div>
         <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-amber-700 mb-2">节点类型</label>
+            <div className="flex gap-2 flex-wrap">
+              {NODE_TYPE_OPTIONS.map(t => {
+                const c = NODE_TYPE_COLORS[t];
+                const sel = t === type;
+                return (
+                  <button key={t} type="button"
+                    onClick={() => setType(t)}
+                    style={{
+                      backgroundColor: sel ? c.bg : c.hover,
+                      color: sel ? '#fff' : c.text,
+                      borderColor: sel ? c.bg : 'transparent',
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all ${sel ? 'shadow-md' : 'hover:shadow-sm'}`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
           <div>
             <label className="block text-sm font-medium text-amber-700 mb-2">节点名称</label>
             <input type="text" value={name}
@@ -40,8 +66,10 @@ export function EditNodeModal({ node, onSave, onClose }: EditNodeModalProps) {
           <div className="flex gap-3 pt-2">
             <button onClick={onClose}
               className="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium">取消</button>
-            <button onClick={() => { onSave({ ...node, name, content }); onClose(); }}
-              className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-medium shadow-md">保存</button>
+            <button onClick={() => { onSave({ ...node, name, content, type }); onClose(); }}
+              className="flex-1 px-4 py-3 text-white rounded-xl font-medium shadow-md" style={{ backgroundColor: colors.bg }}>
+              保存
+            </button>
           </div>
         </div>
       </div>

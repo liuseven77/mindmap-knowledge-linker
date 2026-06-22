@@ -172,4 +172,24 @@ const editingNode = { ...node };
 
 ---
 
-> 最近更新：2026-06-22（新增验证清单条目）
+## 14. 节点类型颜色改造导致连线覆盖节点
+
+**根因**：引入节点类型颜色时，给选中节点加了 `zIndex: 10`，但未选中节点没有显式设置 `zIndex`（默认 `auto`）。SVG 连线的容器也设了 `zIndex: 1`。在同一个 `position: relative` 的父容器中，z-index 默认值 `auto` 的 DOM 元素会被显式设了 z-index 的元素覆盖——导致连线（z-index:1）叠在未选中节点（z-index:auto）上面。但选中节点（z-index:10）遮盖连线，所以表现为"选中时正常，未选中时连线穿透节点"。
+
+**关键认知**：
+
+1. **SVG 是 DOM 元素，不是背景**。`<svg>` 放在 `relative` 容器里，和其他 `absolute` 的 `<div>` 节点属于同一层叠上下文。SVG 不会自动"沉底"。
+
+2. **z-index 只对设置了 position（非 static）的元素生效**。`zIndex: 'auto'` vs `zIndex: 1` 在同一个 stacking context 中，显式值优先于 auto，即使 auto 的 DOM 出现在后面。
+
+3. **不要混用 Tailwind class 和 inline style 设置同一个 CSS 概念**。`className` 里的 `z-10` 和 `style={{ zIndex: 10 }}` 如果不同步，哪个生效取决于优先级——inline style 永远胜出。这次改造时把 z-index 移到了 inline style，但不小心漏掉了未选中节点。
+
+**修复**：三层 z-index 分层：连线 SVG `zIndex: 1` < 未选中节点 `zIndex: 2` < 选中节点 `zIndex: 10`。所有节点都显式设置 zIndex。
+
+**教训**：在 relative 容器中混合放置 SVG 和绝对定位节点时，必须显式设置每一层的 zIndex，不要依赖 DOM 顺序。任何改了一处 z-index 的变更，都应该检查同一 stacking context 中所有兄弟元素。
+
+**与此相关的另一个 bug——连线拖动延迟**：此问题并非真实延迟，而是 `transition-transform duration-150` 的 CSS 动画让节点渲染变换时延迟 150ms。肉眼看到连线"追着节点跑"，实际上是节点在追赶鼠标、连线同步更新。去掉 `transition` 即可消除。
+
+---
+
+> 最近更新：2026-06-22（新增连线覆盖节点bug教训）

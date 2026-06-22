@@ -16,7 +16,7 @@
 ```
 src/
 ├── App.tsx                        # 根路由：首页 ↔ 画布
-├── types.ts                       # 纯类型定义（Node, Connection, Notebook）
+├── types.ts                       # 类型定义（Node, Connection, Notebook）+ NodeType + 颜色映射
 ├── storage.ts                     # 存储接口 + localStorage 适配器（为 Supabase 预留）
 ├── autoExport.ts                  # 自动备份（File System Access API + IndexedDB）
 ├── services/
@@ -32,6 +32,13 @@ src/
     ├── AIPanel.tsx                 # AI 助手面板（探索关联/润色内容/检查关系/自由提问）
     ├── AISettings.tsx              # AI 配置弹窗（API Key + 模型名）
     └── Modals.tsx                  # 弹窗（全部受控组件）
+
+项目文档：
+├── GUIDE.md                       # 节点类型使用指南
+├── RESEARCH.md                    # 竞品源码调研报告
+├── IDEAS.md                       # 待实现功能池
+├── LESSONS.md                     # 踩坑经验录
+└── README.md                      # 项目说明
 ```
 
 ## 关键约定
@@ -47,10 +54,11 @@ src/
 - **编辑后取消选中**：保存弹窗时 `setSelectedNodes(new Set())`，避免编辑完还保持选中状态。
 - **节点防重叠**：新节点用黄金角度螺旋扫描找空位（`|n.x - cx| < 160 && |n.y - cy| < 60`，最多 20 次），拖拽松手时 `resolveOverlaps` 将重叠邻居推开（strength=0.8）。均不涉及 DOM 操作。
 - **一键分散布局**：力导向算法（100 轮迭代，排斥力 all pairs + 吸引力 connected pairs + 中心引力 + 指数降温），点 `Shuffle` 按钮触发，单次 `setNodes` 生成一条撤销快照。
-- **连线悬停高亮**：SVG 透明宽热区（`strokeWidth=16`）+ 可见线（悬停时加粗变色）+ tooltip 显示 `节点A —— 节点B` + 连线内容。
+- **节点类型 + 颜色系统**：5 种类型（concept/fact/question/source/person），各有颜色映射（`NODE_TYPE_COLORS`），定义在 `src/types.ts`。工具栏类型选择器向下展开，`addNode` 带 `newNodeType`。节点卡片：未选中用 `ring` 色背景 + 左侧边框 + 类型色图标/文字；选中用 `bg` 色填充。EditNodeModal 有类型切换丸形按钮。使用指南见 [GUIDE.md](GUIDE.md)。
+- **连线 SVG z-index 分层**：连线 SVG `zIndex: 1` < 未选中节点 `zIndex: 2` < 选中节点 `zIndex: 10`。所有 absolute 定位元素必须显式设 zIndex，不依赖 DOM 顺序。节点背景色（`backgroundColor: '#fff'` / ring 色）必须写在 inline style 而非 Tailwind class，否则会透出下方连线。
 - **数据变更**后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
 - **提交前**：`npx tsc --noEmit` 零错误；本地 dev server 运行正常；验证拖拽（多缩放级别）、连线、悬停、undo/redo
-- 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
+- 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新，每次做新功能时浏览一次提醒自己
 - 提示词模板见 [vibe-coding-经验.md](vibe-coding-经验.md)（给用户的协作指南）
 - **AI API 代理**：开发用 Vite proxy（`/api/chat` → `api.deepseek.com`），生产用 `vercel.json` rewrites
 
@@ -68,7 +76,7 @@ npm run typecheck    # TypeScript 类型检查（提交前必须通过）
 ```
 localStorage ("mindmap_notebooks")
   └── Notebook[] — 笔记本数组
-        ├── nodes[]         — 节点（id, name, content, x, y）
+        ├── nodes[]         — 节点（id, name, content, x, y, type?）
         ├── connections[]   — 连线（id, fromId, toId, content）
         ├── createdAt
         └── updatedAt

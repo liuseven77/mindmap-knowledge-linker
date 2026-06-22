@@ -3,8 +3,8 @@ import {
   X, Link2, Edit3, Plus, Trash2, Move, RotateCcw, Sparkles, Shuffle,
   ArrowLeft, Search, Download, Undo2, Redo2, ExternalLink, ListTree, BrainCircuit
 } from 'lucide-react';
-import type { Node, Connection, Notebook } from '../types';
-import { generateId } from '../types';
+import type { Node, Connection, Notebook, NodeType } from '../types';
+import { generateId, NODE_TYPE_COLORS, NODE_TYPE_OPTIONS } from '../types';
 import { useUndo } from '../useUndo';
 import { EditNodeModal, DuplicateModal, EditConnectionModal } from './Modals';
 import { AIPanel } from './AIPanel';
@@ -20,6 +20,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const { nodes, connections, setNodes, setConnections, undo, redo, canUndo, canRedo } =
     useUndo(notebook.nodes, notebook.connections);
   const [newNodeName, setNewNodeName] = useState('');
+  const [newNodeType, setNewNodeType] = useState<NodeType>('concept');
+  const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
   const [editingNode, setEditingNode] = useState<Node | null>(null);
   const [editingConnection, setEditingConnection] = useState<Connection | null>(null);
@@ -123,6 +125,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
       id: generateId(), name, content: '',
       x: worldX,
       y: worldY,
+      type: newNodeType,
     };
     setNodes(prev => [...prev, node]);
     setNewNodeName('');
@@ -470,6 +473,43 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
                            focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100
                            bg-white/90 text-amber-900 placeholder-amber-400 transition-all"
                 />
+                {/* Node type picker */}
+                <div className="relative">
+                  <button onClick={() => setShowTypePicker(!showTypePicker)}
+                    style={{
+                      backgroundColor: NODE_TYPE_COLORS[newNodeType].hover,
+                      color: NODE_TYPE_COLORS[newNodeType].text,
+                      borderColor: NODE_TYPE_COLORS[newNodeType].bg,
+                    }}
+                    className="px-3 py-2 rounded-xl border-2 text-sm font-medium flex items-center gap-1.5 transition-colors"
+                  >
+                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: NODE_TYPE_COLORS[newNodeType].bg }} />
+                    {NODE_TYPE_COLORS[newNodeType].label}
+                  </button>
+                  {showTypePicker && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowTypePicker(false)} />
+                      <div className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl border border-gray-100 p-1.5 z-50 flex gap-1">
+                        {NODE_TYPE_OPTIONS.map(t => {
+                          const c = NODE_TYPE_COLORS[t];
+                          const sel = t === newNodeType;
+                          return (
+                            <button key={t}
+                              onClick={() => { setNewNodeType(t); setShowTypePicker(false); }}
+                              style={{
+                                backgroundColor: sel ? c.bg : c.hover,
+                                color: sel ? '#fff' : c.text,
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors hover:brightness-95"
+                            >
+                              {c.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                </div>
                 <button onClick={() => addNode()}
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl
                            font-medium shadow-lg shadow-amber-200 hover:shadow-amber-300
@@ -689,8 +729,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
         onClick={() => setSelectedNodes(new Set())}
         className="relative w-full h-[calc(100vh-88px)] overflow-hidden cursor-grab select-none"
       >
-        {/* SVG connections */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none">
+        {/* SVG connections — behind nodes (lower z-index) */}
+        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
           {connections.map(conn => {
             const fromNode = nodes.find(n => n.id === conn.fromId);
             const toNode = nodes.find(n => n.id === conn.toId);
@@ -754,6 +794,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
         {/* Nodes */}
         {nodes.map(node => {
           const sel = selectedNodes.has(node.id);
+          const colors = NODE_TYPE_COLORS[node.type || 'concept'];
           return (
             <div
               key={node.id}
@@ -766,13 +807,13 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
               onClick={(e) => handleNodeClick(e, node.id)}
               onMouseEnter={() => setHoveredId(node.id)}
               onMouseLeave={() => setHoveredId(null)}
-              style={nodeStyle(node)}
-              className={`absolute origin-center cursor-move min-w-[120px] px-4 py-3 rounded-2xl shadow-lg
-                        ${sel ? 'bg-amber-400 ring-4 ring-amber-300 shadow-xl z-10' : 'bg-white hover:bg-amber-50 hover:shadow-xl'}`}
+              style={sel ? { ...nodeStyle(node), backgroundColor: colors.bg, zIndex: 10, boxShadow: `0 0 0 4px ${colors.ring}` } : { ...nodeStyle(node), backgroundColor: colors.ring, zIndex: 2, borderLeftColor: colors.bg }}
+              className={`absolute origin-center cursor-move min-w-[120px] px-4 py-3 rounded-2xl shadow-lg border-l-4
+                        ${sel ? 'text-white scale-110' : ''}`}
             >
               <div className="flex items-center gap-2">
-                <Move size={14} className={sel ? 'text-white' : 'text-amber-400'} />
-                <span className={`font-medium ${sel ? 'text-white' : 'text-amber-800'}`}>{node.name}</span>
+                <Move size={14} className={sel ? 'text-white' : ''} style={{ color: sel ? undefined : colors.icon }} />
+                <span className={`font-medium ${sel ? 'text-white' : ''}`} style={{ color: sel ? undefined : colors.text }}>{node.name}</span>
               </div>
             </div>
           );
