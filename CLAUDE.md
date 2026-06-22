@@ -45,6 +45,9 @@ src/
 - **缩放/平移**：用 ref 存储最新值（panRef/scaleRef），避免事件监听器闭包过期
 - **撤销/重做**：快照栈（useUndo），Ctrl+Z / Ctrl+Shift+Z，初始化跳过首次 Effect。键盘事件中检测 `e.target.tagName`，INPUT/TEXTAREA 内跳过全局快捷键，避免与文本编辑冲突。
 - **编辑后取消选中**：保存弹窗时 `setSelectedNodes(new Set())`，避免编辑完还保持选中状态。
+- **节点防重叠**：新节点用黄金角度螺旋扫描找空位（`|n.x - cx| < 160 && |n.y - cy| < 60`，最多 20 次），拖拽松手时 `resolveOverlaps` 将重叠邻居推开（strength=0.8）。均不涉及 DOM 操作。
+- **一键分散布局**：力导向算法（100 轮迭代，排斥力 all pairs + 吸引力 connected pairs + 中心引力 + 指数降温），点 `Shuffle` 按钮触发，单次 `setNodes` 生成一条撤销快照。
+- **连线悬停高亮**：SVG 透明宽热区（`strokeWidth=16`）+ 可见线（悬停时加粗变色）+ tooltip 显示 `节点A —— 节点B` + 连线内容。
 - **数据变更**后自动调用 `autoExportIfEnabled()`，静默写入本地备份文件夹
 - **提交前**：`npx tsc --noEmit` 零错误；本地 dev server 运行正常；验证拖拽（多缩放级别）、连线、悬停、undo/redo
 - 关键经验教训见 [LESSONS.md](LESSONS.md)，每次踩坑后更新
