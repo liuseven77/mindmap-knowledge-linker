@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  X, Link2, Edit3, Plus, Trash2, Move, RotateCcw, Sparkles,
+  X, Link2, Edit3, Plus, Trash2, Move, RotateCcw, Sparkles, Shuffle,
   ArrowLeft, Search, Download, Undo2, Redo2, ExternalLink, ListTree, BrainCircuit
 } from 'lucide-react';
 import type { Node, Connection, Notebook } from '../types';
@@ -80,10 +80,47 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     const c = canvasRef.current;
     const cw = c?.clientWidth ?? 800;
     const ch = c?.clientHeight ?? 600;
+    const centerX = cw / 2;
+    const centerY = ch / 2;
+
+    let worldX: number;
+    let worldY: number;
+
+    if (nodes.length === 0) {
+      worldX = centerX;
+      worldY = centerY;
+    } else {
+      const GOLDEN_ANGLE = 2.39996; // 137.508° in radians
+      const MIN_DX = 160;
+      const MIN_DY = 60;
+      let placed = false;
+      let r = 0;
+      worldX = centerX;
+      worldY = centerY;
+
+      for (let i = 0; i < 20; i++) {
+        const angle = i * GOLDEN_ANGLE;
+        r += 25;
+        const cx = centerX + r * Math.cos(angle);
+        const cy = centerY + r * Math.sin(angle);
+        const overlap = nodes.some(n => Math.abs(n.x - cx) < MIN_DX && Math.abs(n.y - cy) < MIN_DY);
+        if (!overlap) {
+          worldX = cx;
+          worldY = cy;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        worldX = centerX + (Math.random() - 0.5) * 200;
+        worldY = centerY + (Math.random() - 0.5) * 200;
+      }
+    }
+
     const node: Node = {
       id: generateId(), name, content: '',
-      x: cw / 2 + (Math.random() - 0.5) * 200,
-      y: ch / 2 + (Math.random() - 0.5) * 200,
+      x: worldX,
+      y: worldY,
     };
     setNodes(prev => [...prev, node]);
     setNewNodeName('');
@@ -97,6 +134,74 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
 
   const deleteConnection = (id: string) => {
     setConnections(prev => prev.filter(c => c.id !== id));
+  };
+
+  // ── Scatter (force-directed layout) ─────────
+
+  const scatterNodes = () => {
+    if (nodes.length <= 1) return;
+
+    const c = canvasRef.current;
+    const cw = c?.clientWidth ?? 800;
+    const ch = c?.clientHeight ?? 600;
+    const centerX = cw / 2;
+    const centerY = ch / 2;
+
+    const positions = nodes.map(n => ({ x: n.x, y: n.y }));
+    const nodeIndex = new Map<string, number>();
+    nodes.forEach((n, i) => nodeIndex.set(n.id, i));
+
+    for (let iter = 0; iter < 100; iter++) {
+      const forces = positions.map(() => ({ fx: 0, fy: 0 }));
+      const damping = Math.pow(0.97, iter);
+
+      // Repulsion: all node pairs
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = positions[j].x - positions[i].x;
+          const dy = positions[j].y - positions[i].y;
+          const distSq = dx * dx + dy * dy + 1;
+          const dist = Math.sqrt(distSq);
+          const force = 50000 / distSq;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          forces[i].fx -= fx;
+          forces[i].fy -= fy;
+          forces[j].fx += fx;
+          forces[j].fy += fy;
+        }
+      }
+
+      // Attraction: connected node pairs
+      for (const conn of connections) {
+        const i = nodeIndex.get(conn.fromId);
+        const j = nodeIndex.get(conn.toId);
+        if (i === undefined || j === undefined) continue;
+        const dx = positions[j].x - positions[i].x;
+        const dy = positions[j].y - positions[i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) + 0.01;
+        const force = (dist - 200) * 0.01;
+        const fx = (dx / dist) * force;
+        const fy = (dy / dist) * force;
+        forces[i].fx += fx;
+        forces[i].fy += fy;
+        forces[j].fx -= fx;
+        forces[j].fy -= fy;
+      }
+
+      // Center gravity + clamp + apply
+      for (let i = 0; i < nodes.length; i++) {
+        forces[i].fx += (centerX - positions[i].x) * 0.001;
+        forces[i].fy += (centerY - positions[i].y) * 0.001;
+
+        const stepX = Math.max(-50, Math.min(50, forces[i].fx * damping));
+        const stepY = Math.max(-50, Math.min(50, forces[i].fy * damping));
+        positions[i].x += stepX;
+        positions[i].y += stepY;
+      }
+    }
+
+    setNodes(nodes.map((n, i) => ({ ...n, x: positions[i].x, y: positions[i].y })));
   };
 
   // ── Search ───────────────────────────────────
@@ -358,8 +463,16 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
                 </button>
                 <button onClick={() => { setScale(1); setPan({ x: 0, y: 0 }); }}
                   className="p-2 bg-white hover:bg-amber-50 text-amber-600 rounded-xl
-                           border-2 border-amber-200 hover:border-amber-300 transition-all">
+                           border-2 border-amber-200 hover:border-amber-300 transition-all"
+                  title="重置视图">
                   <RotateCcw size={20} />
+                </button>
+                <button onClick={scatterNodes} disabled={nodes.length <= 1}
+                  className={`p-2 rounded-xl border-2 transition-all ${
+                    nodes.length > 1 ? 'bg-white hover:bg-amber-50 text-amber-600 border-amber-200 hover:border-amber-300'
+                    : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'}`}
+                  title="分散布局">
+                  <Shuffle size={20} />
                 </button>
                 <button
                   onClick={() => setShowAIPanel(!showAIPanel)}
