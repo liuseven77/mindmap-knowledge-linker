@@ -741,7 +741,7 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
             >
               <div className="bg-white rounded-xl shadow-2xl border border-amber-200 px-3 py-2 max-w-xs">
                 <p className="text-xs font-semibold text-amber-800">
-                  {fromName} → {toName}
+                  {fromName} —— {toName}
                 </p>
                 {conn.content && (
                   <p className="text-xs text-amber-600 mt-1 whitespace-pre-wrap">{conn.content}</p>

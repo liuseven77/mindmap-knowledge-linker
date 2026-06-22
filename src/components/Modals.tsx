@@ -108,7 +108,7 @@ export function EditConnectionModal({ connection, fromName, toName, onSave, onDe
             <div className="px-4 py-2 bg-white rounded-xl shadow-sm border border-amber-200">
               <span className="font-medium text-amber-800">{fromName}</span>
             </div>
-            <span className="text-green-500 font-bold">↔</span>
+            <span className="text-green-500 font-bold">——</span>
             <div className="px-4 py-2 bg-white rounded-xl shadow-sm border border-amber-200">
               <span className="font-medium text-amber-800">{toName}</span>
             </div>
