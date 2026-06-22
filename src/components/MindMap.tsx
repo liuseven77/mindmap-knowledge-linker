@@ -31,6 +31,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [showBacklinks, setShowBacklinks] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [hoveredConnId, setHoveredConnId] = useState<string | null>(null);
+  const [hoveredConnPos, setHoveredConnPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const nodeEls = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -137,6 +139,33 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
   };
 
   // ── Scatter (force-directed layout) ─────────
+
+  const resolveOverlaps = (nodeId: string, strength = 0.8) => {
+    const dragged = nodes.find(n => n.id === nodeId);
+    if (!dragged) return;
+    const MIN_DX = 160;
+    const MIN_DY = 60;
+    const updates: Map<string, { dx: number; dy: number }> = new Map();
+
+    for (const other of nodes) {
+      if (other.id === nodeId) continue;
+      const dx = other.x - dragged.x;
+      const dy = other.y - dragged.y;
+      const overlapX = MIN_DX - Math.abs(dx);
+      const overlapY = MIN_DY - Math.abs(dy);
+      if (overlapX <= 0 || overlapY <= 0) continue;
+      // Push the other away from dragged node
+      const pushX = Math.sign(dx) * overlapX * strength;
+      const pushY = Math.sign(dy) * overlapY * strength;
+      updates.set(other.id, { dx: pushX, dy: pushY });
+    }
+
+    if (updates.size === 0) return;
+    setNodes(prev => prev.map(n => {
+      const u = updates.get(n.id);
+      return u ? { ...n, x: n.x + u.dx, y: n.y + u.dy } : n;
+    }));
+  };
 
   const scatterNodes = () => {
     if (nodes.length <= 1) return;
@@ -322,6 +351,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     if (ds.active) {
       const el = nodeEls.current.get(ds.nodeId);
       if (el) { el.style.zIndex = ''; }
+      // Push overlapping neighbors away from dropped node
+      resolveOverlaps(ds.nodeId);
     }
     dragState.current = null;
   };
@@ -666,13 +697,59 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
             if (!fromNode || !toNode) return null;
             const ft = screenPos(fromNode.x, fromNode.y, cw, ch);
             const tt = screenPos(toNode.x, toNode.y, cw, ch);
+            const isHovered = hoveredConnId === conn.id;
             return (
-              <line key={conn.id}
-                x1={ft.x} y1={ft.y} x2={tt.x} y2={tt.y}
-                stroke="#d97706" strokeWidth={3 * scale} strokeLinecap="round" opacity="0.6" />
+              <g key={conn.id}>
+                {/* Invisible wide hit area */}
+                <line
+                  x1={ft.x} y1={ft.y} x2={tt.x} y2={tt.y}
+                  stroke="transparent" strokeWidth={16}
+                  style={{ pointerEvents: 'stroke' }}
+                  onMouseEnter={(e) => {
+                    setHoveredConnId(conn.id);
+                    setHoveredConnPos({ x: e.clientX, y: e.clientY });
+                  }}
+                  onMouseMove={(e) => setHoveredConnPos({ x: e.clientX, y: e.clientY })}
+                  onMouseLeave={() => setHoveredConnId(null)}
+                />
+                {/* Visible line */}
+                <line
+                  x1={ft.x} y1={ft.y} x2={tt.x} y2={tt.y}
+                  stroke={isHovered ? '#f59e0b' : '#d97706'}
+                  strokeWidth={isHovered ? 5 * scale : 3 * scale}
+                  strokeLinecap="round"
+                  opacity={isHovered ? 1 : 0.6}
+                />
+              </g>
             );
           })}
         </svg>
+
+        {/* Connection hover tooltip */}
+        {hoveredConnId && (() => {
+          const conn = connections.find(c => c.id === hoveredConnId);
+          if (!conn) return null;
+          const fromName = getNodeName(conn.fromId);
+          const toName = getNodeName(conn.toId);
+          return (
+            <div
+              className="fixed pointer-events-none z-[60]"
+              style={{
+                left: hoveredConnPos.x + 14,
+                top: hoveredConnPos.y - 12,
+              }}
+            >
+              <div className="bg-white rounded-xl shadow-2xl border border-amber-200 px-3 py-2 max-w-xs">
+                <p className="text-xs font-semibold text-amber-800">
+                  {fromName} → {toName}
+                </p>
+                {conn.content && (
+                  <p className="text-xs text-amber-600 mt-1 whitespace-pre-wrap">{conn.content}</p>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Nodes */}
         {nodes.map(node => {
