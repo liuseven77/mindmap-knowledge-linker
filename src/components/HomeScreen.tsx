@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { BookOpen, BookPlus, Clock, Plus, Trash2, Download, Upload, FolderSync } from 'lucide-react';
 import type { Notebook } from '../types';
 import { storage } from '../storage';
-import { pickExportFolder, isAutoExportEnabled, disableAutoExport } from '../autoExport';
+import { pickExportFolder, isAutoExportEnabled, disableAutoExport, autoExportIfEnabled } from '../autoExport';
 
 interface HomeScreenProps {
   onCreate: (name: string) => void;
@@ -30,7 +30,9 @@ export function HomeScreen({ onCreate, onOpen }: HomeScreenProps) {
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const updated = notebooks.filter(n => n.id !== id);
-    storage.save
+    storage.save(updated);
+    autoExportIfEnabled(updated);
+    setNotebooks(updated);
   };
 
   const handleExportAll = () => {

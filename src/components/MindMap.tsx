@@ -8,7 +8,7 @@ import { generateId, NODE_TYPE_COLORS, NODE_TYPE_OPTIONS } from '../types';
 import { useUndo } from '../useUndo';
 import { EditNodeModal, DuplicateModal, EditConnectionModal } from './Modals';
 import { AIPanel } from './AIPanel';
-import { worldToScreen, screenToWorld, panToCenter, nodeTransform } from '../lib/coordinates';
+import { worldToScreen, panToCenter, nodeTransform } from '../lib/coordinates';
 
 interface MindMapProps {
   notebook: Notebook;
@@ -17,7 +17,7 @@ interface MindMapProps {
 }
 
 export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
-  const { nodes, connections, setNodes, setConnections, undo, redo, canUndo, canRedo } =
+  const { nodes, connections, setNodes, setConnections, undo, redo, canUndo, canRedo, beginBatch, endBatch } =
     useUndo(notebook.nodes, notebook.connections);
   const [newNodeName, setNewNodeName] = useState('');
   const [newNodeType, setNewNodeType] = useState<NodeType>('concept');
@@ -312,6 +312,8 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return;
 
+    beginBatch(); // 拖拽期间的多次移动合并为一步撤销
+
     dragState.current = {
       nodeId,
       worldX: node.x,
@@ -354,17 +356,21 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
     if (ds.active) {
       const el = nodeEls.current.get(ds.nodeId);
       if (el) { el.style.zIndex = ''; }
+    }
+    endBatch(); // 先结束批量，记录拖拽结果；再触发推挤（单独一步）
+    if (ds.active) {
       // Push overlapping neighbors away from dropped node
       resolveOverlaps(ds.nodeId);
     }
     dragState.current = null;
   };
 
-  const handlePointerCancel = (e: React.PointerEvent) => {
+  const handlePointerCancel = (_e: React.PointerEvent) => {
     const ds = dragState.current;
     if (!ds) return;
     const el = nodeEls.current.get(ds.nodeId);
     if (el) { el.style.zIndex = ''; }
+    endBatch();
     dragState.current = null;
   };
 
@@ -412,10 +418,6 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
         })
         .filter(b => b.otherNode)
     : [];
-
-  const orphanCount = nodes.filter(n => {
-    return !connections.some(c => c.fromId === n.id || c.toId === n.id);
-  }).length;
 
   // ── Render ────────────────────────────────────
 
@@ -860,7 +862,6 @@ export function MindMap({ notebook, onUpdate, onBack }: MindMapProps) {
           nodes={nodes}
           connections={connections}
           selectedNodes={selectedNodes}
-          getNodeName={getNodeName}
           onClose={() => setShowAIPanel(false)}
         />
       )}

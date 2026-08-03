@@ -10,7 +10,6 @@ interface Props {
   nodes: Node[];
   connections: Connection[];
   selectedNodes: Set<string>;
-  getNodeName: (id: string) => string;
   onClose: () => void;
 }
 
@@ -19,15 +18,27 @@ interface Message {
   content: string;
 }
 
+function escapeHtml(text: string): string {
+  // 先转义 HTML 特殊字符，防止 AI 输出被当作 HTML 执行（XSS）
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderMarkdown(text: string): string {
+  // 先转义再渲染：转义不影响 **bold** 标记，但能拦截 <script>/<img onerror> 等注入
+  const escaped = escapeHtml(text);
   // **bold** → <strong>
-  let html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  let html = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   // \n → <br>
   html = html.replace(/\n/g, '<br>');
   return html;
 }
 
-export function AIPanel({ nodes, connections, selectedNodes, getNodeName, onClose }: Props) {
+export function AIPanel({ nodes, connections, selectedNodes, onClose }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

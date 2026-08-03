@@ -21,10 +21,9 @@ export async function chat(
   messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
   config: AIConfig,
 ): Promise<string> {
-  // In dev: go through Vite proxy. In prod: direct to DeepSeek API.
-  const url = import.meta.env.DEV
-    ? '/api/chat'
-    : 'https://api.deepseek.com/v1/chat/completions';
+  // 统一走 /api/chat：dev 由 Vite proxy 转发，prod 由 Vercel rewrite 转发。
+  // 避免浏览器直连第三方 API 触发 CORS，同时隐藏真实 API 地址。
+  const url = '/api/chat';
 
   const res = await fetch(url, {
     method: 'POST',

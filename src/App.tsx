@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { Node, Connection, Notebook } from './types';
 import { generateId } from './types';
 import { storage } from './storage';

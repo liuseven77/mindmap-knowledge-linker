@@ -14,7 +14,13 @@ class LocalStorageAdapter implements NotebookStorage {
   }
 
   save(notebooks: Notebook[]): void {
-    localStorage.setItem(KEY, JSON.stringify(notebooks));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(notebooks));
+    } catch (err) {
+      // 兜底：localStorage 约 5MB 上限，写满时不能静默崩溃丢数据
+      console.error('保存失败：本地存储可能已满', err);
+      window.alert('保存失败：浏览器本地存储空间已满（约 5MB）。请先导出备份数据，或删除不用的笔记本后重试。');
+    }
   }
 }
 

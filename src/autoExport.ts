@@ -19,7 +19,26 @@ export async function pickExportFolder(): Promise<boolean> {
   }
 }
 
+// ── 防抖 + 轮转：拖拽等频繁变更时合并写入，避免每帧写文件、备份文件爆炸 ──
+const DEBOUNCE_MS = 2000;
+const MAX_BACKUPS = 5;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let pendingData: unknown = null;
+
 export async function autoExportIfEnabled(data: unknown): Promise<void> {
+  // 2 秒防抖：多次连续变更只写最后一次，拖拽时不再每帧写文件
+  pendingData = data;
+  if (debounceTimer) return;
+  debounceTimer = setTimeout(async () => {
+    debounceTimer = null;
+    const snapshot = pendingData;
+    pendingData = null;
+    if (snapshot == null) return;
+    await writeBackup(snapshot);
+  }, DEBOUNCE_MS);
+}
+
+async function writeBackup(data: unknown): Promise<void> {
   const handle = await getStoredHandle();
   if (!handle) return;
 
@@ -32,6 +51,18 @@ export async function autoExportIfEnabled(data: unknown): Promise<void> {
         clearHandle();
         return;
       }
+    }
+
+    // 轮转：只保留最近 MAX_BACKUPS 份备份，删除更旧的（文件名 ISO 时间字典序即时间序）
+    const backups: string[] = [];
+    for await (const [name] of handle.entries()) {
+      if (name.startsWith('mindmap-backup-') && name.endsWith('.json')) {
+        backups.push(name);
+      }
+    }
+    backups.sort().reverse();
+    for (const oldName of backups.slice(MAX_BACKUPS - 1)) {
+      await handle.removeEntry(oldName);
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
